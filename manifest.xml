@@ -1,0 +1,14 @@
+<package>
+  <description brief="skiller">
+     Skill Execution and Runtime. This is the mid-level for reactive behavior
+     entities (skills) of the behavior engine.
+  </description>
+  <author>Tim Niemueller</author>
+  <license>GPLv2+</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/skiller</url>
+  <depend package="roscpp"/>
+  <depend package="roslib"/>
+  <depend package="lua_utils"/>
+  <depend package="roslua"/>
+</package>
