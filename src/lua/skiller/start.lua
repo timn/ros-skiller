@@ -19,10 +19,23 @@
 --
 --  Read the full text in the LICENSE.GPL file in the doc directory.
 
-local topic = "/chatter"
-local msgtype = "std_msgs/String"
+require("actionlib")
 
-local s = roslua.subscriber(topic, msgtype)
-s:add_listener(function (message)
-		  message:print()
-	       end)
+local acl = actionlib.action_client("/roundtrip", "actionlib_benchmark/Roundtrip")
+local sent_goal = false
+local goal_handle = nil
+
+roslua.add_spinner(
+   function ()
+      if acl:has_server() and not sent_goal then
+	 sent_goal = true
+	 printf("Send goal")
+	 local goal = acl.actspec.goal_spec:instantiate()
+	 goal.values.start = roslua.Time.now()
+	 goal_handle = acl:send_goal(goal)
+      elseif goal_handle then
+	 if goal_handle:terminal() then
+	    printf("Goal finished")
+	 end
+      end
+   end)
