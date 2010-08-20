@@ -1,9 +1,9 @@
 
 ----------------------------------------------------------------------------
---  start.lua - Skiller startup script -- ROS version
+--  skillstati.lua - Possible skill return values
 --
---  Created: Tue Aug  3 15:29:28 2010 (at Intel Research, Pittsburgh)
---  Copyright  2010  Tim Niemueller [www.niemueller.de]
+--  Created: Fri Dec 12 18:55:14 2008
+--  Copyright  2008  Tim Niemueller [www.niemueller.de]
 --
 ----------------------------------------------------------------------------
 
@@ -19,25 +19,9 @@
 --
 --  Read the full text in the LICENSE.GPL file in the doc directory.
 
-require("actionlib")
+module(...)
 
-require("fawkes.mathext")
-
-local acl = actionlib.action_client("/roundtrip", "actionlib_benchmark/Roundtrip")
-local sent_goal = false
-local goal_handle = nil
-
-roslua.add_spinner(
-   function ()
-      if acl:has_server() and not sent_goal then
-	 sent_goal = true
-	 printf("Send goal")
-	 local goal = acl.actspec.goal_spec:instantiate()
-	 goal.values.start = roslua.Time.now()
-	 goal_handle = acl:send_goal(goal)
-      elseif goal_handle then
-	 if goal_handle:terminal() then
-	    printf("Goal finished")
-	 end
-      end
-   end)
+S_INACTIVE = 0
+S_FINAL    = 1
+S_RUNNING  = 2
+S_FAILED   = 3
