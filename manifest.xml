@@ -11,4 +11,6 @@
   <depend package="roslib"/>
   <depend package="lua_utils"/>
   <depend package="roslua"/>
+  <depend package="actionlib_lua"/>
+  <depend package="actionlib_msgs"/>
 </package>
