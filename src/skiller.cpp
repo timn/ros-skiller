@@ -58,7 +58,7 @@ class SkillerMain
     __lua.do_string("roslua.init_node{master_uri=\"%s\", node_name=\"/skiller\"}",
 		    ros::master::getURI().c_str());
 
-    __lua.set_start_script(LUADIR"/skiller/start.lua");
+    __lua.set_start_script(LUADIR"/skiller/ros/start.lua");
   }
 
   int run()
