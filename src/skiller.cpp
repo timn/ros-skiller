@@ -44,19 +44,16 @@ class SkillerMain
   void
   init_lua()
   {
-    std::string skill_space = "test";
+    std::string skill_space = "herb_skills";
     if (__n.hasParam("/skiller/skillspace")) {
       __n.getParam("/skiller/skillspace", skill_space);
     }
     __lua.set_string("SKILLSPACE", skill_space.c_str());
+    __lua.set_string("ROS_MASTER_URI", ros::master::getURI().c_str());
 
     __lua.add_package_dir(LUADIR);
     __lua.add_package("roslua");
     __lua.set_cfunction("add_watchfile", lua_add_watchfile);
-
-    // init Lua node
-    __lua.do_string("roslua.init_node{master_uri=\"%s\", node_name=\"/skiller\"}",
-		    ros::master::getURI().c_str());
 
     __lua.set_start_script(LUADIR"/skiller/ros/start.lua");
   }
@@ -69,12 +66,12 @@ class SkillerMain
     bool quit = false;
     // run until skiller stopped
     while (! quit && __n.ok() ) {
-      __lua.get_global("roslua");		// roslua
+      __lua.get_global("roslua");	// roslua
       try {
 	// Spin!
 	__lua.get_field(-1, "spin");	// roslua roslua.spin
 	try {
-	  __lua.pcall();	// roslua
+	  __lua.pcall();		// roslua
 	} catch (Exception &e) {
 	  printf("%s", e.what());
 	}
