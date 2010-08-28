@@ -1,7 +1,4 @@
 string skillstring
 ---
-SkillStatus status
----
-bool success
 string errmsg
-SkillStatus status
+---
