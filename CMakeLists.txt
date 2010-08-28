@@ -17,7 +17,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 add_definitions(-DLUADIR='"${PROJECT_SOURCE_DIR}/src/lua"')
 
 rosbuild_genmsg()
-#rosbuild_gensrv()
+rosbuild_gensrv()
 
 rosbuild_add_executable(skiller src/skiller.cpp)
 
