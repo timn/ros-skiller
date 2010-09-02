@@ -24,10 +24,11 @@
 #include <ros/ros.h>
 
 #include <lua_utils/context.h>
+#include <lua_utils/context_watcher.h>
 
 static int lua_add_watchfile(lua_State *L);
 
-class SkillerMain
+class SkillerMain : public fawkes::LuaContextWatcher
 {
   friend int lua_add_watchfile(lua_State *L);
  public:
@@ -35,11 +36,25 @@ class SkillerMain
     : __lua(/* watch files */ true, /* tracebacks */ true),
       __n(n)
   {
+    __lua.add_watcher(this);
   }
 
-  ~SkillerMain()
+  // for LuaContextWatcher
+  void
+  lua_init(fawkes::LuaContext *context) {}
+
+  void
+  lua_finalize(fawkes::LuaContext *context)
   {
+    printf("Finalizing context\n");
+    context->get_global("roslua");	// roslua
+    context->get_field(-1, "finalize");	// roslua roslua.finalize
+    context->pcall();			// roslua
+    context->pop(1);			// ---
   }
+
+  void
+  lua_restarted(fawkes::LuaContext *context) {}
 
   void
   init_lua()
@@ -48,12 +63,13 @@ class SkillerMain
     if (__n.hasParam("/skiller/skillspace")) {
       __n.getParam("/skiller/skillspace", skill_space);
     }
-    __lua.set_string("SKILLSPACE", skill_space.c_str());
-    __lua.set_string("ROS_MASTER_URI", ros::master::getURI().c_str());
 
+    __lua.set_cfunction("add_watchfile", lua_add_watchfile);
     __lua.add_package_dir(LUADIR);
     __lua.add_package("roslua");
-    __lua.set_cfunction("add_watchfile", lua_add_watchfile);
+
+    __lua.set_string("SKILLSPACE", skill_space.c_str());
+    __lua.set_string("ROS_MASTER_URI", ros::master::getURI().c_str());
 
     __lua.set_start_script(LUADIR"/skiller/ros/start.lua");
   }
@@ -80,15 +96,13 @@ class SkillerMain
 	__lua.get_field(-1, "quit");	// roslua roslua.quit
 	quit = __lua.to_boolean(-1);
 	__lua.pop(2);			// ---
+
+	__lua.process_fam_events();
       } catch (Exception &e) {
 	printf("%s\n", e.what());
       }
       rate.sleep();
     }
-    __lua.get_global("roslua");		// roslua
-    __lua.get_field(-1, "finalize");	// roslua roslua.finalize
-    __lua.pcall();			// roslua
-    __lua.pop(1);			// ---
     return 0;
   }
 
@@ -119,5 +133,7 @@ main(int argc, char **argv)
   ros::NodeHandle n;
 
   skiller = new SkillerMain(n);
-  return skiller->run();
+  int rv = skiller->run();
+  delete skiller;
+  return rv;
 }
