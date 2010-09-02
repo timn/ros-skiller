@@ -46,15 +46,16 @@ class SkillerMain : public fawkes::LuaContextWatcher
   void
   lua_finalize(fawkes::LuaContext *context)
   {
-    printf("Finalizing context\n");
-    context->get_global("roslua");	// roslua
-    context->get_field(-1, "finalize");	// roslua roslua.finalize
-    context->pcall();			// roslua
-    context->pop(1);			// ---
   }
 
   void
-  lua_restarted(fawkes::LuaContext *context) {}
+  lua_restarted(fawkes::LuaContext *context)
+  {
+    // Restarted will _not_ be called on the very first initialization, because
+    // the watcher is not yet registered. For each reload, we need to run the
+    // start script after contexts have been swaped.
+    __lua.do_file(LUADIR"/skiller/ros/start.lua");
+  }
 
   void
   init_lua()
@@ -71,7 +72,9 @@ class SkillerMain : public fawkes::LuaContextWatcher
     __lua.set_string("SKILLSPACE", skill_space.c_str());
     __lua.set_string("ROS_MASTER_URI", ros::master::getURI().c_str());
 
-    __lua.set_start_script(LUADIR"/skiller/ros/start.lua");
+    // Cannot do this for proper reloading, calling this manually
+    //__lua.set_start_script(LUADIR"/skiller/ros/start.lua");
+    __lua.do_file(LUADIR"/skiller/ros/start.lua");
   }
 
   int run()
