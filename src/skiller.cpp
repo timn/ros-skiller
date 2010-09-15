@@ -46,6 +46,14 @@ class SkillerMain : public fawkes::LuaContextWatcher
   void
   lua_finalize(fawkes::LuaContext *context)
   {
+    __lua.get_global("roslua");		// roslua
+    __lua.get_field(-1, "finalize");	// roslua roslua.finalize
+    try {
+      __lua.pcall();			// roslua
+    } catch (Exception &e) {
+      printf("Finalize failed: %s", e.what());
+    }
+    __lua.pop(1);			// ---
   }
 
   void
