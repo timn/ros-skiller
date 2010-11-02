@@ -39,6 +39,13 @@ local last_active_skills = {}
 local skill_space      = ""
 local graphing_enabled = true
 
+local sksf_pre_exec_listeners  = {}
+local sksf_post_exec_listeners = {}
+
+
+local MONGO_LOG = true
+local mongolog
+
 local module_exports = {
    SkillHSM          = shsmmod.SkillHSM,
    JumpState         = shsmmod.JumpState,
@@ -168,6 +175,12 @@ function init(skillspace)
       end
    end
 
+   if MONGO_LOG then
+      mongolog = require("skiller.log_mongo")
+      mongolog.init()
+      register_post_exec_listener(mongolog_post)
+   end
+
    local ok = pcall(require, "skills." .. SKILLSPACE)
    if not ok then require(SKILLSPACE) end
 end
@@ -205,6 +218,31 @@ function gensandbox()
 
    return rv
 end
+
+function call_pre_exec_listeners()
+   for _,l in pairs(sksf_pre_exec_listeners) do l() end
+end
+
+function call_post_exec_listeners()
+   for _,l in pairs(sksf_post_exec_listeners) do l() end
+end
+
+function register_pre_exec_listener(listener)
+   sksf_pre_exec_listeners[listener] = listener
+end
+
+function register_post_exec_listener(listener)
+   sksf_post_exec_listeners[listener] = listener
+end
+
+function unregister_pre_listener(listener)
+   sksf_pre_listeners[listener] = nil
+end
+
+function unregister_post_listener(listener)
+   sksf_post_listeners[listener] = nil
+end
+
 
 --- Generate skill function from skill string.
 -- This function creates a new skill function by compiling the passed skill
