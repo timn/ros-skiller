@@ -22,6 +22,7 @@
 require("fawkes.modinit")
 module(..., fawkes.modinit.register_all)
 require("fawkes.logprint")
+require("fawkes.tableext")
 local skillstati = require("skiller.skillstati")
 local shsmmod    = require("skiller.skillhsm")
 local jsmod      = require("fawkes.fsm.jumpstate")
@@ -33,6 +34,7 @@ local grapher    = require("fawkes.fsm.grapher")
 local skills        = {}
 local skill_status  = { running = {}, final = {}, failed = {} }
 local active_skills = {}
+local last_active_skills = {}
 
 local skill_space      = ""
 local graphing_enabled = true
@@ -263,6 +265,7 @@ end
 -- Reset the status values, but do *not* call the reset functions of the skills.
 function reset_status()
    skill_status = { running = {}, final = {}, failed = {} }
+   last_active_skills = table.deepcopy(active_skills)
    active_skills = {}
 end
 
@@ -274,6 +277,7 @@ function reset_all()
    reset_skills(skill_status.final)
    reset_skills(skill_status.failed)
    reset_status()
+   last_active_skills = {}
 end
 
 --- Reset loop internals.
@@ -295,13 +299,13 @@ end
 function get_error()
    local errors={}
    for _, active_skill in ipairs(active_skills) do
-      local fsm = skiller.skillenv.get_skill_fsm(active_skill)
+      local fsm = skiller.skillenv.get_skill_fsm(active_skill.name)
       if fsm and fsm.error and fsm.error ~= "" then
-	 table.insert(errors, active_skill .. ": " .. fsm.error)
+	 table.insert(errors, active_skill.name .. ": " .. fsm.error)
       else
-	 local mod = get_skill_module(active_skill)
+	 local mod = get_skill_module(active_skill.name)
 	 if mod and mod.errmsg and mod.errmsg ~= "" then
-	    table.insert(errors, active_skill .. ": " .. mod.ermsg)
+	    table.insert(errors, active_skill.name .. ": " .. mod.ermsg)
 	 end
       end
    end
@@ -414,7 +418,8 @@ function write_skiller_debug(skdbg, what, graphdir, colored)
    elseif graphing_enabled then
       local sname = what
       if what == "ACTIVE" then
-	 sname = get_active_skills()
+	 local active_skill = get_active_skills()
+	 sname = active_skill.name
       end
 
       local fsm = get_skill_fsm(sname)
@@ -438,13 +443,41 @@ function write_skiller_debug(skdbg, what, graphdir, colored)
    end
 end
 
+function mongolog_post()
+   local changed = false
+
+   -- check if anything has changed
+   for i, as in ipairs(active_skills) do
+      if not last_active_skills[i] then
+	 changed = true
+	 break
+      end
+
+      las = last_active_skills[i]
+      if as.name ~= las.name or as.status ~= las.status then
+	 changed = true
+	 break
+      end
+   end
+
+   if changed then
+      local doc = { datetime = mongolog.now(), active_skills = {}, error = get_error() }
+      for _, as in ipairs(active_skills) do
+	 local asdoc = { name = as.name, args = as.args, status = as.status }
+	 table.insert(doc.active_skills, asdoc)
+      end
+
+      mongolog.insert("skiller.log", doc)
+   end
+end
+
 -- Top skill execution starts.
 -- Internal function used in the automatically generated function wrapper to indicate
 -- that a skill has started its execution.
 -- @param skill_name name of the skill that is about to start
-function skill_loop_begin(skill_name)
+function skill_loop_begin(skill_name, skill_args)
    --print("Skill " .. skill_name .. " starts execution")
-   table.insert(active_skills, skill_name)
+   table.insert(active_skills, {name=skill_name, args=skill_srgs})
 end
 
 
@@ -457,6 +490,12 @@ function skill_loop_end(skill_name, status)
    if ( type(status) ~= "number" ) then
       print("Skill " .. skill_name .. " did not return a valid final result.")
       return
+   end
+
+   for _, as in ipairs(active_skills) do
+      if as.name == skill_name then
+	 as.status = status
+      end
    end
 
    if status == skillstati.S_FINAL then

@@ -81,7 +81,8 @@ function spin_cb(goal_handle, action_server)
    local active_skill = skiller.skillenv.get_active_skills()
    local fsm
    if active_skill then
-      fsm = skiller.skillenv.get_skill_fsm(active_skill)
+      local skill_name = active_skill.name
+      fsm = skiller.skillenv.get_skill_fsm(skill_name)
    end
    skiller.ros.graph.publish(fsm)
 end
