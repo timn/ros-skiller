@@ -50,6 +50,8 @@ function init_actions(module, table)
 	 end
 	 action_clients[id] = actionlib.action_client(t.name, t.type, flags)
       end
+      assert(action_clients[id], "Action client %s::%s could not be initialized", t.name, t.type)
       table[t.v] = action_clients[id]
    end
 end
+
