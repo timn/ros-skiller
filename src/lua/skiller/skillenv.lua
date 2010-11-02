@@ -204,6 +204,28 @@ function gensandbox()
    return rv
 end
 
+--- Generate skill function from skill string.
+-- This function creates a new skill function by compiling the passed skill
+-- string, jailing it into a sandbox environment, and possible attaching
+-- functions executed before and/or after skill string execution.
+-- @param skill_string skill string to execute in function
+-- @return function executing the skill string when called, jailed in a sandbox
+-- environment, and with possible pre/post execution functions attached.
+function skill_function(skill_string)
+   local compiled_skill_string    = assert(loadstring(skill_string))
+   --local call_pre_exec_listeners  = call_pre_exec_listeners
+   --local call_post_exec_listeners = call_post_exec_listeners
+   local sksf = function()
+		   call_pre_exec_listeners()
+		   compiled_skill_string()
+		   call_post_exec_listeners()
+		end
+
+   local sandbox = gensandbox()
+   setfenv(compiled_skill_string, sandbox)
+
+   return sksf
+end
 
 --- Call reset functions.
 -- This iterates over a given array of skill names or functions and executes the reset

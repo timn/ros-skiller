@@ -39,16 +39,14 @@ function goal_cb(goal_handle, action_server)
    printf("Starting goal %s", goal_handle.goal_id)
    action_server:cancel_goals_before(goal_handle.goalmsg.values.header.values.stamp)
    goal_handle.vars.skillstring = goal_handle.goalmsg.values.goal.values.skillstring
-   local ok, sksf = pcall(loadstring, goal_handle.vars.skillstring)
+   local ok, sksf = pcall(skillenv.skill_function, goal_handle.vars.skillstring)
    if ok then
       skillenv.reset_all()
-      local sandbox = skillenv.gensandbox()
-      setfenv(sksf, sandbox)
       goal_handle.vars.sksf = sksf
       printf("Accepting goal %s", goal_handle.goal_id)
       goal_handle:accept()
    else
-      printf("Rejecting goal %s", goal_handle.goal_id)
+      printf("Rejecting goal %s (%s)", goal_handle.goal_id, sksf)
       goal_handle:reject(sksf)
    end
 end
