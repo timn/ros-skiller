@@ -2,9 +2,10 @@
 ------------------------------------------------------------------------
 --  action_initializer.lua - Action dependency initializer
 --
---  Created: Wed Aug 25 18:11:59 2010 (Intel Research Pittsburgh)
+--  Created: Wed Aug 25 18:11:59 2010 (Intel Labs Pittsburgh)
 --  Copyright  2010  Tim Niemueller [www.niemueller.de]
---
+--             2010  Carnegie Mellon University
+--             2010  Intel Labs Pittsburgh
 ------------------------------------------------------------------------
 
 --  This program is free software; you can redistribute it and/or modify

@@ -3,8 +3,9 @@
 --  skillstati.lua - Possible skill return values
 --
 --  Created: Fri Dec 12 18:55:14 2008
---  Copyright  2008  Tim Niemueller [www.niemueller.de]
---
+--  Copyright  2008-2010  Tim Niemueller [www.niemueller.de]
+--             2010       Carnegie Mellon University
+--             2010       Intel Labs Pittsburgh
 ----------------------------------------------------------------------------
 
 --  This program is free software; you can redistribute it and/or modify

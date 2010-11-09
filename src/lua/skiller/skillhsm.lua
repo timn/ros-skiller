@@ -3,8 +3,9 @@
 --  skillhsm.lua - Hybrid State Machine for skills, closely related to FSM
 --
 --  Created: Mon Dec 22 11:53:39 2008
---  Copyright  2008  Tim Niemueller [http://www.niemueller.de]
---
+--  Copyright  2008-2010  Tim Niemueller [http://www.niemueller.de]
+--             2010       Carnegie Mellon University
+--             2010       Intel Labs Pittsburgh
 ----------------------------------------------------------------------------
 
 --  This program is free software; you can redistribute it and/or modify
