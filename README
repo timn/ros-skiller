@@ -1,0 +1,20 @@
+
+skiller: Skill Execution and Run-Time environment for ROS
+=========================================================
+
+This package forms the heart of the behavior engine. It includes a node that,
+when run, creates the Lua environment for skill development, execution, and
+monitoring. It implements a reactive behavior layer, in which arbitrary
+execution schemes can be implemented. It provides specific tool support to
+employ the approach of extended hybrid state machines.
+
+Requirements
+------------
+It builds on utility packages from the behavior_engine stack. Additionally,
+it uses actionlib via actionlib_lua to make use of functionality provided
+by the base system and other ROS nodes.
+
+Documentation
+-------------
+Guides and howtos are currently work in progress. For now we would like to
+refer to the example set of skills provided in the herb_skills package.
