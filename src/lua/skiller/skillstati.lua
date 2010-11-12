@@ -26,3 +26,9 @@ S_INACTIVE = 0
 S_FINAL    = 1
 S_RUNNING  = 2
 S_FAILED   = 3
+
+status_tostring = {}
+status_tostring[0] = "S_INACTIVE"
+status_tostring[1] = "S_FINAL"
+status_tostring[2] = "S_RUNNING"
+status_tostring[3] = "S_FAILED"
