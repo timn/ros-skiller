@@ -42,6 +42,13 @@ function insert(collection, document)
    end
 end
 
+function update(collection, query, document, upsert, multi)
+   local ok, err = pcall(db.update, db, collection, query, document, upsert, multi)
+   if not ok then
+      print_warn("Failed to update document in %s: %s", collection, err)
+   end
+end
+
 function now()
    return mongo.Date(os.time() * 1000)
 end

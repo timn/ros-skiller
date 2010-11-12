@@ -3,9 +3,9 @@
 --  skillenv.lua - Skiller skill environment functions
 --
 --  Created: Fri Mar 14 22:04:43 2008
---  Copyright  2008-2009  Tim Niemueller [www.niemueller.de]
---             2010  Carnegie Mellon University
---             2010  Intel Labs Pittsburgh
+--  Copyright  2008-2010  Tim Niemueller [www.niemueller.de]
+--             2010       Carnegie Mellon University
+--             2010       Intel Labs Pittsburgh
 ----------------------------------------------------------------------------
 
 --  This program is free software; you can redistribute it and/or modify
@@ -34,8 +34,8 @@ local grapher    = require("fawkes.fsm.grapher")
 
 local skills        = {}
 local skill_status  = { running = {}, final = {}, failed = {} }
-local active_skills = {}
 local last_active_skills = {}
+local active_skills = {}
 
 local skill_space      = ""
 local graphing_enabled = true
@@ -46,6 +46,7 @@ local sksf_post_exec_listeners = {}
 
 local MONGO_LOG = true
 local mongolog
+local mongo_doc
 
 local module_exports = {
    SkillHSM          = shsmmod.SkillHSM,
@@ -254,8 +255,6 @@ end
 -- environment, and with possible pre/post execution functions attached.
 function skill_function(skill_string)
    local compiled_skill_string    = assert(loadstring(skill_string))
-   --local call_pre_exec_listeners  = call_pre_exec_listeners
-   --local call_post_exec_listeners = call_post_exec_listeners
    local sksf = function()
 		   call_pre_exec_listeners()
 		   compiled_skill_string()
@@ -305,18 +304,22 @@ end
 function reset_status()
    skill_status = { running = {}, final = {}, failed = {} }
    last_active_skills = table.deepcopy(active_skills)
-   active_skills = {}
+   for _, active_skill in pairs(active_skills) do
+      active_skill.status = skillstati.S_INACTIVE
+   end
 end
 
 
 --- Reset all.
 -- Resets alls skills and the skill status.
 function reset_all()
+   last_active_skills = table.deepcopy(active_skills)
+   mongolog_post(true)
+
    reset_skills(skill_status.running)
    reset_skills(skill_status.final)
    reset_skills(skill_status.failed)
    reset_status()
-   last_active_skills = {}
 end
 
 --- Reset loop internals.
@@ -337,14 +340,16 @@ end
 -- @return string of errors that occured in active skills
 function get_error()
    local errors={}
-   for _, active_skill in ipairs(active_skills) do
+   for name, active_skill in pairs(active_skills) do
       local fsm = skiller.skillenv.get_skill_fsm(active_skill.name)
       if fsm and fsm.error and fsm.error ~= "" then
-	 table.insert(errors, active_skill.name .. ": " .. fsm.error)
+	 table.insert(errors, name .. "|" ..
+		      skillstati.status_tostring[active_skill.status] .. ": " .. fsm.error)
       else
 	 local mod = get_skill_module(active_skill.name)
 	 if mod and mod.errmsg and mod.errmsg ~= "" then
-	    table.insert(errors, active_skill.name .. ": " .. mod.ermsg)
+	    table.insert(errors, name .. "|" ..
+			 skillstati.status_tostring[active_skill.status] .. ": " .. mod.ermsg)
 	 end
       end
    end
@@ -358,7 +363,7 @@ end
 -- means the skill executed first.
 -- @return unpacked array of names of active skills
 function get_active_skills()
-   return unpack(active_skills)
+   return active_skills
 end
 
 
@@ -457,7 +462,7 @@ function write_skiller_debug(skdbg, what, graphdir, colored)
    elseif graphing_enabled then
       local sname = what
       if what == "ACTIVE" then
-	 local active_skill = get_active_skills()
+	 local active_skill = next(active_skill)
 	 sname = active_skill.name
       end
 
@@ -482,17 +487,17 @@ function write_skiller_debug(skdbg, what, graphdir, colored)
    end
 end
 
-function mongolog_post()
-   local changed = false
+function mongolog_post(ended)
+   local changed = ended or false
 
    -- check if anything has changed
-   for i, as in ipairs(active_skills) do
-      if not last_active_skills[i] then
+   for name, as in pairs(active_skills) do
+      if not last_active_skills[name] then
 	 changed = true
 	 break
       end
 
-      las = last_active_skills[i]
+      las = last_active_skills[name]
       if as.name ~= las.name or as.status ~= las.status then
 	 changed = true
 	 break
@@ -500,13 +505,39 @@ function mongolog_post()
    end
 
    if changed then
-      local doc = { datetime = mongolog.now(), active_skills = {}, error = get_error() }
-      for _, as in ipairs(active_skills) do
-	 local asdoc = { name = as.name, args = as.args, status = as.status }
-	 table.insert(doc.active_skills, asdoc)
+      if not mongo_doc then
+	 mongo_doc = { started = mongolog.now(), active_skills = {},
+		       error = get_error(), status={running=0, final=0, failed=0} }
+      else
+	 mongo_doc.error = get_error()
+      end
+      if ended then
+	 mongo_doc.ended = mongolog.now()
+      end
+      mongo_doc.status.running, mongo_doc.status.final, mongo_doc.status.failed = get_status()
+      for name, as in pairs(active_skills) do
+	 local index = as.mongodoc_index
+	 if not index then
+	    index = #mongo_doc.active_skills + 1
+	    mongo_doc.active_skills[index] = { name = as.name, args = as.args, history={} }
+	    as.mongodoc_index = index
+	 end
+	 local asdoc = mongo_doc.active_skills[index]
+	 if ended then
+	    local fsm = get_skill_fsm(as.name)
+	    if fsm then asdoc.graph = fsm:graph() end
+	 end
+	 if not last_active_skills[name] or last_active_skills[name].status ~= as.status then
+	    -- status has changed, insert new one
+	    table.insert(asdoc.history, {when=mongolog.now(), status=skillstati.status_tostring[as.status]})
+	 end
       end
 
-      mongolog.insert("skiller.log", doc)
+      -- upsert, non-multi
+      mongolog.update("skiller.log", {started=mongo_doc.datetime}, mongo_doc, true, false)
+   end
+   if ended then
+      mongo_doc = nil
    end
 end
 
@@ -516,7 +547,11 @@ end
 -- @param skill_name name of the skill that is about to start
 function skill_loop_begin(skill_name, skill_args)
    --print("Skill " .. skill_name .. " starts execution")
-   table.insert(active_skills, {name=skill_name, args=skill_srgs})
+   if active_skills[skill_name] then
+      active_skills[skill_name].status = S_RUNNING
+   else
+      active_skills[skill_name] = {name=skill_name, args=skill_args, status=S_RUNNING}
+   end
 end
 
 
@@ -527,14 +562,13 @@ end
 -- @param status status returned by the skill
 function skill_loop_end(skill_name, status)
    if ( type(status) ~= "number" ) then
-      print("Skill " .. skill_name .. " did not return a valid final result.")
-      return
+      print_warn("Skill " .. skill_name .. " did not return a valid final result, assuming failed.")
+      status = S_FAILED
    end
 
-   for _, as in ipairs(active_skills) do
-      if as.name == skill_name then
-	 as.status = status
-      end
+   if not active_skills[skill_name] then
+      print_warn("Skill " .. skill_name .. " did not call skill_loop_begin, marking failed")
+      status = S_FAILED
    end
 
    if status == skillstati.S_FINAL then
@@ -547,7 +581,15 @@ function skill_loop_end(skill_name, status)
       --print_debug("Skill function " .. skill_name .. " has failed")
       table.insert(skill_status.failed, skill_name)
    else
-      print("Skill " .. skill_name .. " returned an invalid skill status (" .. status .. ")")
+      print("Skill " .. skill_name .. " returned an invalid skill status, marking failed (" .. status .. ")")
+      status = S_FAILED
+      table.insert(skill_status.failed, skill_name)
+   end
+
+   if active_skills[skill_name] then
+      active_skills[skill_name].status = status
+   else
+      active_skills[skill_name] = {name="skill_name", args={}, status=S_FAILED}
    end
 end
 
@@ -558,7 +600,7 @@ end
 -- function for generating a functable.
 function create_skill_wrapper_func()
    return function(skill, ...)
-	     skill_loop_begin(skill.name)
+	     skill_loop_begin(skill.name, ...)
 	     rv = {skill.execute(...)}
 	     skill_loop_end(skill.name, rv[1])
 	     return unpack(rv)

@@ -70,16 +70,18 @@ function spin_cb(goal_handle, action_server)
 	 print_warn("Skill execution of '%s' failed (%s)",
 		    goal_handle.vars.skillstring, result.values.errmsg)
 	 goal_handle:abort(result, result.values.errmsg)
+	 skillenv.reset_all()
       elseif final > 0 and running == 0 then
 	 print_info("Skill execution of '%s' succeeded", goal_handle.vars.skillstring)
 	 local result = action_server.actspec.result_spec:instantiate()
 	 goal_handle:finish(result)
+	 skillenv.reset_all()
       elseif running > 0 then
 	 -- nothing to do
       end
    end
 
-   local active_skill = skiller.skillenv.get_active_skills()
+   local active_skill = next(skiller.skillenv.get_active_skills())
    local fsm
    if active_skill then
       local skill_name = active_skill.name

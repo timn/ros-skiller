@@ -88,7 +88,7 @@ function publish(fsm)
 	 fsm.dotattr = { fontname = "Neo Sans Intel"}
       end
       local graph = fsm:graph()
-      m.values.name      = active_skill
+      m.values.name      = fsm.name
       m.values.dotgraph  = graph
       m.values.colored   = fawkes.fsm.grapher.get_colored()
       m.values.direction = rankdir_to_graphdir()
