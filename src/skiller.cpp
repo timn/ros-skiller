@@ -32,9 +32,9 @@ class SkillerMain : public fawkes::LuaContextWatcher
 {
   friend int lua_add_watchfile(lua_State *L);
  public:
-  SkillerMain(ros::NodeHandle &n)
+  SkillerMain(ros::NodeHandle &n, int argc, char **argv)
     : __lua(/* watch files */ false, /* tracebacks */ true),
-      __n(n)
+      __n(n), __argc(argc), __argv(argv)
   {
     __lua.add_watcher(this);
   }
@@ -69,7 +69,9 @@ class SkillerMain : public fawkes::LuaContextWatcher
   init_lua()
   {
     std::string skill_space = "herb_skills";
-    if (__n.hasParam("/skiller/skillspace")) {
+    if (__argc == 2) {
+      skill_space = __argv[1];
+    } else if (__n.hasParam("/skiller/skillspace")) {
       __n.getParam("/skiller/skillspace", skill_space);
     }
 
@@ -120,6 +122,8 @@ class SkillerMain : public fawkes::LuaContextWatcher
  private:
   fawkes::LuaContext __lua;
   ros::NodeHandle &__n;
+  int __argc;
+  char **__argv;
 };
 
 static SkillerMain *skiller;
@@ -137,13 +141,30 @@ lua_add_watchfile(lua_State *L)
   return 0;
 }
 
+
+void
+print_usage(const char *program_name)
+{
+  printf("Usage: %s [skill_space]\n\n"
+	 "skill_space is the Lua module name that configures a skill space.\n"
+	 "It defaults to \"herb_skills\". It can also be set via the"
+	 "/skiller/skill_space paramete and rosparam/launch file.\n\n",
+	 program_name);
+}
+
+
 int
 main(int argc, char **argv)
 {
   ros::init(argc, argv, "skillermain");
   ros::NodeHandle n;
 
-  skiller = new SkillerMain(n);
+  if (argc > 2) {
+    print_usage(argv[0]);
+    exit(-1);
+  }
+
+  skiller = new SkillerMain(n, argc, argv);
   int rv = skiller->run();
   delete skiller;
   return rv;
