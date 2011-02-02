@@ -13,4 +13,7 @@
   <depend package="roslua"/>
   <depend package="actionlib_lua"/>
   <depend package="actionlib_msgs"/>
+  <export>
+    <cpp cflags="-I${prefix}/msg/cpp -I${prefix}/srv/cpp"/>
+  </export>
 </package>
