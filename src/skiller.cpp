@@ -165,7 +165,13 @@ main(int argc, char **argv)
   }
 
   skiller = new SkillerMain(n, argc, argv);
-  int rv = skiller->run();
+  int rv = 0;
+  try {
+    rv = skiller->run();
+  } catch (Exception &e) {
+    printf("Running skiller failed: %s\n", e.what());
+    rv = -1;
+  }
   delete skiller;
   return rv;
 }
