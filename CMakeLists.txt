@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.4.6)
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
+cmake_policy(SET CMP0005 NEW)
+
 # Set the build type.  Options are:
 #  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
 #  Debug          : w/ debug symbols, w/o optimization
@@ -14,7 +16,7 @@ rosbuild_init()
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-add_definitions(-DLUADIR='"${PROJECT_SOURCE_DIR}/src/lua"')
+add_definitions(-DLUADIR="${PROJECT_SOURCE_DIR}/src/lua")
 
 rosbuild_genmsg()
 rosbuild_gensrv()
